@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>𝓖𝓪𝓵𝓮𝓻𝔂</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0; background: #222; color: #fff;
+    display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+  }
+  header {
+    padding: 1rem;
+    background: #111;
+    width: 100%;
+    text-align: center;
+    font-size: 1.5rem;
+    user-select: none;
+  }
+  #uploadBtn {
+    margin: 1rem 0;
+    background: #0a84ff;
+    color: white;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    font-size: 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  #uploadBtn:hover {
+    background: #0066cc;
+  }
+  #fileInput {
+    display: none;
+  }
+  #gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill,minmax(150px,1fr));
+    gap: 10px;
+    width: 90%;
+    max-width: 900px;
+    margin-bottom: 2rem;
+  }
+  .thumb-wrapper {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 5px #000;
+  }
+  .thumb {
+    width: 100%;
+    aspect-ratio: 4/3;
+    object-fit: cover;
+    cursor: pointer;
+    display: block;
+    transition: transform 0.15s ease;
+  }
+  .thumb:hover {
+    transform: scale(1.05);
+  }
+  .delete-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: rgba(255, 0, 0, 0.8);
+    border: none;
+    color: white;
+    font-weight: bold;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 22px;
+    text-align: center;
+    user-select: none;
+    opacity: 0.85;
+  }
+  .delete-btn:hover {
+    opacity: 1;
+  }
+  #modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 10;
+  }
+  #modal.visible {
+    visibility: visible;
+    opacity: 1;
+  }
+  #modal img {
+    max-width: 90vw;
+    max-height: 90vh;
+    border-radius: 10px;
+    box-shadow: 0 0 20px #0a84ff;
+  }
+  #closeBtn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #0a84ff;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 10px #0a84ff;
+  }
+  #closeBtn:hover {
+    background: #005bb5;
+  }
+</style>
+</head>
+<body>
+<header>𝓖𝓪𝓵𝓮𝓻𝔂</header>
+<button id="uploadBtn">CREATE</button>
+<input type="file" id="fileInput" accept="image/*" multiple />
+<div id="gallery"></div>
+
+<div id="modal">
+  <button id="closeBtn">&times;</button>
+  <img src="" alt="Збільшене зображення" />
+</div>
+
+<script>
+  const uploadBtn = document.getElementById('uploadBtn');
+  const fileInput = document.getElementById('fileInput');
+  const gallery = document.getElementById('gallery');
+  const modal = document.getElementById('modal');
+  const modalImg = modal.querySelector('img');
+  const closeBtn = document.getElementById('closeBtn');
+
+  let images = [];
+
+  function saveToLocalStorage() {
+    localStorage.setItem('galleryImages', JSON.stringify(images));
+  }
+
+  function loadFromLocalStorage() {
+    const data = localStorage.getItem('galleryImages');
+    if (data) {
+      images = JSON.parse(data);
+      images.forEach((imgData, i) => {
+        createImageElement(imgData, i);
+      });
+    }
+  }
+
+  function createImageElement(src, index) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'thumb-wrapper';
+
+    const img = document.createElement('img');
+    img.src = src;
+    img.className = 'thumb';
+    img.alt = `Image ${index + 1}`;
+    img.onclick = () => {
+      modalImg.src = img.src;
+      modal.classList.add('visible');
+    };
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'delete-btn';
+    delBtn.textContent = '×';
+    delBtn.title = 'Видалити зображення';
+    delBtn.onclick = e => {
+      e.stopPropagation();
+      images.splice(index, 1);
+      saveToLocalStorage();
+      renderGallery();
+      if (modal.classList.contains('visible') && modalImg.src === src) {
+        modal.classList.remove('visible');
+        modalImg.src = '';
+      }
+    };
+
+    wrapper.appendChild(img);
+    wrapper.appendChild(delBtn);
+    gallery.appendChild(wrapper);
+  }
+
+  function renderGallery() {
+    gallery.innerHTML = '';
+    images.forEach((src, i) => {
+      createImageElement(src, i);
+    });
+  }
+
+  uploadBtn.onclick = () => fileInput.click();
+
+  fileInput.onchange = e => {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      if (!file.type.startsWith('image/')) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        images.push(ev.target.result);
+        saveToLocalStorage();
+        renderGallery();
+      };
+      reader.readAsDataURL(file);
+    });
+    fileInput.value = '';
+  };
+
+  closeBtn.onclick = () => {
+    modal.classList.remove('visible');
+    modalImg.src = '';
+  };
+
+  modal.onclick = e => {
+    if (e.target === modal) {
+      modal.classList.remove('visible');
+      modalImg.src = '';
+    }
+  };
+
+  loadFromLocalStorage();
+</script>
+</body>
+</html>
